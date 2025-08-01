@@ -14,7 +14,7 @@ def main():
     print("APK Editor - Web Application")
     print("=" * 60)
     print("Starting server...")
-    print("Server will be available at: http://127.0.0.1:5000")
+    print("Server will be available at: http://127.0.0.1:5001")
     print("Press Ctrl+C to stop the server")
     print("=" * 60)
     
@@ -28,7 +28,7 @@ def main():
     try:
         app.run(
             host='127.0.0.1',
-            port=5000,
+            port=5001,
             debug=True,
             use_reloader=False  # Disable reloader to prevent double startup
         )
