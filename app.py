@@ -778,7 +778,31 @@ public class MainActivity extends Activity {{
 """
                 zip_ref.writestr(f'app/src/main/java/{project_name.lower().replace(" ", "_")}/MainActivity.java', main_activity_java)
                 
+                # First, create a basic AndroidManifest.xml if none exists
+                manifest_content = f"""<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="{project_name.lower().replace(' ', '_').replace('-', '_')}">
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:theme="@style/AppTheme">
+        <activity
+            android:name=".MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+
+</manifest>"""
+                zip_ref.writestr('app/src/main/AndroidManifest.xml', manifest_content)
+                
                 # Copy original APK files to app/src/main, filtering problematic files
+                manifest_copied = False
                 for root, dirs, files in os.walk(project_dir):
                     for file in files:
                         file_path = os.path.join(root, file)
@@ -791,9 +815,19 @@ public class MainActivity extends Activity {{
                         # Map APK structure to Android Studio structure
                         if arc_path.startswith('res/'):
                             new_path = f'app/src/main/{arc_path}'
-                        elif arc_path == 'AndroidManifest.xml':
-                            # Copy but ensure it has proper structure
-                            new_path = 'app/src/main/AndroidManifest.xml'
+                        elif arc_path == 'AndroidManifest.xml' and not manifest_copied:
+                            # Try to use the original manifest, but validate it first
+                            try:
+                                with open(file_path, 'r', encoding='utf-8') as f:
+                                    original_manifest = f.read()
+                                # Only use original if it's valid XML
+                                if original_manifest.strip() and '<?xml' in original_manifest:
+                                    zip_ref.writestr('app/src/main/AndroidManifest.xml', original_manifest)
+                                    manifest_copied = True
+                                    continue
+                            except Exception:
+                                pass  # Use the default manifest we created above
+                            continue
                         else:
                             # Put other files in assets
                             new_path = f'app/src/main/assets/{arc_path}'
@@ -814,12 +848,28 @@ public class MainActivity extends Activity {{
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Hello World!"
+        android:text="@string/app_name"
         android:textSize="18sp" />
 
 </LinearLayout>
 """
                 zip_ref.writestr('app/src/main/res/layout/activity_main.xml', basic_layout)
+                
+                # Create strings.xml
+                strings_xml = f"""<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">{project_name}</string>
+</resources>"""
+                zip_ref.writestr('app/src/main/res/values/strings.xml', strings_xml)
+                
+                # Create styles.xml
+                styles_xml = """<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
+        <!-- Customize your theme here. -->
+    </style>
+</resources>"""
+                zip_ref.writestr('app/src/main/res/values/styles.xml', styles_xml)
                 
                 # Add proguard-rules.pro
                 proguard_rules = """# Add project specific ProGuard rules here.
