@@ -341,6 +341,110 @@ def create_app():
             with zipfile.ZipFile(export_path, 'w', zipfile.ZIP_DEFLATED) as zip_ref:
                 # Create Android Studio project structure
                 
+                # Add gradle wrapper properties first
+                gradle_wrapper_properties = """distributionBase=GRADLE_USER_HOME
+distributionPath=wrapper/dists
+distributionUrl=https\\://services.gradle.org/distributions/gradle-8.0-bin.zip
+zipStoreBase=GRADLE_USER_HOME
+zipStorePath=wrapper/dists
+"""
+                zip_ref.writestr('gradle/wrapper/gradle-wrapper.properties', gradle_wrapper_properties)
+                
+                # Add gradle wrapper jar (create empty placeholder)
+                zip_ref.writestr('gradle/wrapper/gradle-wrapper.jar', '')
+                
+                # Add gradle wrapper batch script
+                gradle_wrapper_bat = """@rem
+@rem Copyright 2015 the original author or authors.
+@rem
+@rem Licensed under the Apache License, Version 2.0 (the "License");
+@rem you may not use this file except in compliance with the License.
+@rem You may obtain a copy of the License at
+@rem
+@rem      https://www.apache.org/licenses/LICENSE-2.0
+@rem
+@rem Unless required by applicable law or agreed to in writing, software
+@rem distributed under the License is distributed on an "AS IS" BASIS,
+@rem WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+@rem See the License for the specific language governing permissions and
+@rem limitations under the License.
+@rem
+
+@if "%DEBUG%" == "" @echo off
+@rem ##########################################################################
+@rem
+@rem  Gradle startup script for Windows
+@rem
+@rem ##########################################################################
+
+@rem Set local scope for the variables with windows NT shell
+if "%OS%"=="Windows_NT" setlocal
+
+set DIRNAME=%~dp0
+if "%DIRNAME%" == "" set DIRNAME=.
+set APP_BASE_NAME=%~n0
+set APP_HOME=%DIRNAME%
+
+@rem Resolve any "." and ".." in APP_HOME to make it shorter.
+for %%i in ("%APP_HOME%") do set APP_HOME=%%~fi
+
+@rem Add default JVM options here. You can also use JAVA_OPTS and GRADLE_OPTS to pass JVM options to this script.
+set DEFAULT_JVM_OPTS="-Xmx64m" "-Xms64m"
+
+@rem Find java.exe
+if defined JAVA_HOME goto findJavaFromJavaHome
+
+set JAVA_EXE=java.exe
+%JAVA_EXE% -version >NUL 2>&1
+if "%ERRORLEVEL%" == "0" goto execute
+
+echo.
+echo ERROR: JAVA_HOME is not set and no 'java' command could be found in your PATH.
+echo.
+echo Please set the JAVA_HOME variable in your environment to match the
+echo location of your Java installation.
+
+goto fail
+
+:findJavaFromJavaHome
+set JAVA_HOME=%JAVA_HOME:"=%
+set JAVA_EXE=%JAVA_HOME%/bin/java.exe
+
+if exist "%JAVA_EXE%" goto execute
+
+echo.
+echo ERROR: JAVA_HOME is set to an invalid directory: %JAVA_HOME%
+echo.
+echo Please set the JAVA_HOME variable in your environment to match the
+echo location of your Java installation.
+
+goto fail
+
+:execute
+@rem Setup the command line
+
+set CLASSPATH=%APP_HOME%\\gradle\\wrapper\\gradle-wrapper.jar
+
+@rem Execute Gradle
+"%JAVA_EXE%" %DEFAULT_JVM_OPTS% %JAVA_OPTS% %GRADLE_OPTS% "-Dorg.gradle.appname=%APP_BASE_NAME%" -classpath "%CLASSPATH%" org.gradle.wrapper.GradleWrapperMain %*
+
+:end
+@rem End local scope for the variables with windows NT shell
+if "%ERRORLEVEL%"=="0" goto mainEnd
+
+:fail
+rem Set variable GRADLE_EXIT_CONSOLE if you need the _script_ return code instead of
+rem the _cmd_ return code when the batch script calls an unreachable command.
+set GRADLE_EXIT_CONSOLE=full
+exit /b 1
+
+:mainEnd
+if "%OS%"=="Windows_NT" endlocal
+
+:omega
+"""
+                zip_ref.writestr('gradlew.bat', gradle_wrapper_bat)
+                
                 # Add gradle wrapper
                 gradle_wrapper_content = """#!/usr/bin/env sh
 ##############################################################################
@@ -573,6 +677,16 @@ include ':app'
 """
                 zip_ref.writestr('settings.gradle', settings_gradle)
                 
+                # Add local.properties template
+                local_properties = """## This file must *NOT* be checked into Version Control Systems,
+# as it contains information specific to your local configuration.
+#
+# Location of the SDK. This is only used by Gradle.
+# For customization when using a Version Control System, please read the
+# header note.
+#sdk.dir=/path/to/android/sdk"""
+                zip_ref.writestr('local.properties', local_properties)
+                
                 # Add build.gradle (project level)
                 project_build_gradle = """plugins {
     id 'com.android.application' version '8.1.4' apply false
@@ -584,6 +698,23 @@ include ':app'
 android.useAndroidX=true
 android.enableJetifier=true"""
                 zip_ref.writestr('gradle.properties', gradle_properties)
+                
+                # Add basic MainActivity.java
+                main_activity_java = f"""package {project_name.lower().replace(" ", "_")};
+
+import android.app.Activity;
+import android.os.Bundle;
+
+public class MainActivity extends Activity {{
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {{
+        super.onCreate(savedInstanceState);
+        // TODO: Set content view and implement your logic here
+        // setContentView(R.layout.activity_main);
+    }}
+}}
+"""
+                zip_ref.writestr(f'app/src/main/java/{project_name.lower().replace(" ", "_")}/MainActivity.java', main_activity_java)
                 
                 # Copy original APK files to app/src/main, filtering problematic files
                 for root, dirs, files in os.walk(project_dir):
@@ -599,6 +730,7 @@ android.enableJetifier=true"""
                         if arc_path.startswith('res/'):
                             new_path = f'app/src/main/{arc_path}'
                         elif arc_path == 'AndroidManifest.xml':
+                            # Copy but ensure it has proper structure
                             new_path = 'app/src/main/AndroidManifest.xml'
                         else:
                             # Put other files in assets
@@ -608,6 +740,24 @@ android.enableJetifier=true"""
                             zip_ref.write(file_path, new_path)
                         except Exception as e:
                             logging.warning(f"Skipping file {arc_path}: {e}")
+                
+                # Create a basic layout if none exists
+                basic_layout = """<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Hello World!"
+        android:textSize="18sp" />
+
+</LinearLayout>
+"""
+                zip_ref.writestr('app/src/main/res/layout/activity_main.xml', basic_layout)
                 
                 # Add proguard-rules.pro
                 proguard_rules = """# Add project specific ProGuard rules here.
@@ -640,10 +790,19 @@ This project was exported from APK Editor and can be imported into Android Studi
 
 ## Import Instructions:
 
-1. Open Android Studio
-2. Click "File" > "Open"
-3. Select the extracted project folder
-4. Click "OK" to import
+1. Extract this ZIP file to a folder on your computer
+2. Open Android Studio
+3. Click "File" > "Open" (or "Open an Existing Project")
+4. Navigate to and select the extracted project folder (the one containing build.gradle)
+5. Click "OK" to import
+6. Wait for Gradle sync to complete
+7. If prompted, download any missing SDK components
+
+## Important Notes:
+
+- Make sure you have Android SDK installed
+- You may need to update the SDK versions in build.gradle to match your installed components
+- Create a local.properties file with your SDK path if needed
 
 ## Project Structure:
 
