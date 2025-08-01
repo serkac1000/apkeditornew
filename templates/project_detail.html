@@ -76,6 +76,14 @@
                             </a>
                         {% endif %}
                         
+                        {% if project.status in ['decompiled', 'compiled'] %}
+                            <a href="{{ url_for('export_android_studio', project_id=project.id) }}" 
+                               class="btn btn-outline-info">
+                                <i class="bi bi-box-arrow-up me-2"></i>
+                                Export for Android Studio
+                            </a>
+                        {% endif %}
+                        
                         <a href="{{ url_for('delete_project', project_id=project.id) }}" 
                            class="btn btn-outline-danger ms-auto"
                            onclick="return confirmDelete('{{ project.name }}')">
