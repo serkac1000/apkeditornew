@@ -348,6 +348,24 @@ def create_app():
         except:
             pass
         
+        # Validate XML files to prevent prolog errors
+        if file_path.endswith('.xml'):
+            try:
+                import xml.etree.ElementTree as ET
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                    # Check for empty or invalid XML content
+                    if not content.strip():
+                        return True
+                    # Try to parse XML to validate structure
+                    ET.fromstring(content)
+            except (ET.ParseError, UnicodeDecodeError, FileNotFoundError):
+                # Skip corrupted or unparseable XML files
+                return True
+            except Exception:
+                # Skip any XML file that causes other parsing issues
+                return True
+        
         return False
     
     def create_android_studio_export(project_dir, export_path, project_name):
@@ -856,6 +874,18 @@ This project was exported from APK Editor and can be imported into Android Studi
 
 ## Troubleshooting Common Gradle Errors:
 
+### Content Not Allowed in Prolog Error:
+This error occurs when XML files have invalid content at the beginning:
+
+1. **XML Validation:**
+   - The export automatically filters corrupted XML files
+   - If errors persist, manually check res/ folders for invalid XML files
+   - Look for files that don't start with `<?xml version="1.0" encoding="utf-8"?>`
+
+2. **Clean Resource Directories:**
+   - Delete problematic files from res/drawable/, res/layout/, res/values/
+   - Focus on files with unusual names or very small file sizes
+
 ### Multiple Task Action Failures:
 If you encounter "Multiple task action failures occurred", try these solutions:
 
@@ -881,6 +911,11 @@ If you encounter "Multiple task action failures occurred", try these solutions:
    - The build.gradle already includes AAPT error handling
    - If issues persist, try disabling resource shrinking
 
+### XML Processing Errors:
+- Remove files from drawable-v* folders if they cause issues
+- Delete color-v* directories that reference missing resources
+- Check layout files for malformed XML structure
+
 ### 9-Patch Errors:
 - All .9.png files have been filtered out to prevent compilation errors
 - If you need 9-patch drawables, create new ones using Android Studio's editor
@@ -895,6 +930,11 @@ If you encounter "Multiple task action failures occurred", try these solutions:
   ```
   org.gradle.jvmargs=-Xmx4096m -Dfile.encoding=UTF-8
   ```
+
+### Specific Error Fixes:
+- **ParseError at [row,col]:[1,1]**: Delete the XML file causing the error
+- **Unexpected namespace prefix**: Remove or simplify problematic XML attributes
+- **Resource not found**: Comment out or remove references to missing resources
 
 ## Building:
 
