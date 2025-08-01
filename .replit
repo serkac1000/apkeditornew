@@ -2,3 +2,7 @@ modules = ["web", "python-3.12"]
 
 [nix]
 channel = "stable-25_05"
+
+[[ports]]
+localPort = 5001
+externalPort = 80
