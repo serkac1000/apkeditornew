@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+
+{% block title %}{{ project.name }} - APK Editor{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Project Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h2 text-primary mb-2">
+                        <i class="bi bi-folder-open me-2"></i>
+                        {{ project.name }}
+                    </h1>
+                    <p class="text-muted mb-0">
+                        <i class="bi bi-file-earmark me-1"></i>
+                        {{ project.original_filename }}
+                        <span class="mx-2">•</span>
+                        <i class="bi bi-calendar me-1"></i>
+                        Created: {{ project.created_at.strftime('%Y-%m-%d %H:%M') }}
+                    </p>
+                </div>
+                <div>
+                    {% if project.status == 'uploaded' %}
+                        <span class="badge bg-warning fs-6">Uploaded</span>
+                    {% elif project.status == 'decompiled' %}
+                        <span class="badge bg-info fs-6">Decompiled</span>
+                    {% elif project.status == 'compiled' %}
+                        <span class="badge bg-success fs-6">Ready</span>
+                    {% else %}
+                        <span class="badge bg-secondary fs-6">{{ project.status|title }}</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title mb-3">
+                        <i class="bi bi-tools me-2"></i>
+                        Project Actions
+                    </h5>
+                    <div class="d-flex flex-wrap gap-2">
+                        {% if project.status == 'uploaded' %}
+                            <a href="{{ url_for('decompile_apk', project_id=project.id) }}" 
+                               class="btn btn-primary">
+                                <i class="bi bi-gear me-2"></i>
+                                Decompile APK
+                            </a>
+                        {% elif project.status == 'decompiled' %}
+                            <a href="{{ url_for('compile_apk', project_id=project.id) }}" 
+                               class="btn btn-success">
+                                <i class="bi bi-hammer me-2"></i>
+                                Compile APK
+                            </a>
+                            <a href="{{ url_for('decompile_apk', project_id=project.id) }}" 
+                               class="btn btn-outline-primary">
+                                <i class="bi bi-arrow-clockwise me-2"></i>
+                                Re-decompile
+                            </a>
+                        {% elif project.status == 'compiled' %}
+                            <a href="{{ url_for('download_apk', project_id=project.id) }}" 
+                               class="btn btn-success">
+                                <i class="bi bi-download me-2"></i>
+                                Download APK
+                            </a>
+                            <a href="{{ url_for('compile_apk', project_id=project.id) }}" 
+                               class="btn btn-outline-success">
+                                <i class="bi bi-arrow-clockwise me-2"></i>
+                                Re-compile
+                            </a>
+                        {% endif %}
+                        
+                        <a href="{{ url_for('delete_project', project_id=project.id) }}" 
+                           class="btn btn-outline-danger ms-auto"
+                           onclick="return confirmDelete('{{ project.name }}')">
+                            <i class="bi bi-trash me-2"></i>
+                            Delete Project
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- File Browser -->
+    {% if files %}
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-folder2-open me-2"></i>
+                        Project Files
+                        <span class="badge bg-secondary ms-2">{{ files|length }} files</span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <!-- File Type Filters -->
+                    <div class="mb-3">
+                        <div class="btn-group" role="group">
+                            <input type="radio" class="btn-check" name="fileFilter" id="filterAll" autocomplete="off" checked>
+                            <label class="btn btn-outline-primary" for="filterAll">
+                                <i class="bi bi-files me-1"></i>
+                                All Files ({{ files|length }})
+                            </label>
+
+                            <input type="radio" class="btn-check" name="fileFilter" id="filterImages" autocomplete="off">
+                            <label class="btn btn-outline-success" for="filterImages">
+                                <i class="bi bi-image me-1"></i>
+                                Images ({{ files|selectattr('type', 'equalto', 'image')|list|length }})
+                            </label>
+
+                            <input type="radio" class="btn-check" name="fileFilter" id="filterXml" autocomplete="off">
+                            <label class="btn btn-outline-warning" for="filterXml">
+                                <i class="bi bi-file-code me-1"></i>
+                                XML Files ({{ files|selectattr('type', 'equalto', 'xml')|list|length }})
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- File List -->
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>File</th>
+                                    <th>Type</th>
+                                    <th>Path</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="fileTableBody">
+                                {% for file in files %}
+                                <tr class="file-row" data-type="{{ file.type }}">
+                                    <td>
+                                        {% if file.type == 'image' %}
+                                            <i class="bi bi-image text-success file-icon"></i>
+                                        {% elif file.type == 'xml' %}
+                                            <i class="bi bi-file-code text-warning file-icon"></i>
+                                        {% else %}
+                                            <i class="bi bi-file text-muted file-icon"></i>
+                                        {% endif %}
+                                        {{ file.name }}
+                                    </td>
+                                    <td>
+                                        {% if file.type == 'image' %}
+                                            <span class="badge bg-success">Image</span>
+                                        {% elif file.type == 'xml' %}
+                                            <span class="badge bg-warning">XML</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Other</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <code class="text-muted">{{ file.path }}</code>
+                                    </td>
+                                    <td>
+                                        {% if file.type in ['xml'] %}
+                                            <a href="{{ url_for('edit_file', project_id=project.id, file_path=file.path) }}" 
+                                               class="btn btn-sm btn-outline-primary">
+                                                <i class="bi bi-pencil me-1"></i>
+                                                Edit
+                                            </a>
+                                        {% elif file.type == 'image' %}
+                                            <button class="btn btn-sm btn-outline-info" 
+                                                    onclick="alert('Image editing coming soon!')">
+                                                <i class="bi bi-image me-1"></i>
+                                                View
+                                            </button>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body text-center py-5">
+                    {% if project.status == 'uploaded' %}
+                        <i class="bi bi-gear display-1 text-muted mb-3"></i>
+                        <h4 class="text-muted">APK Not Decompiled Yet</h4>
+                        <p class="text-muted mb-4">Decompile the APK to view and edit its files</p>
+                        <a href="{{ url_for('decompile_apk', project_id=project.id) }}" 
+                           class="btn btn-primary">
+                            <i class="bi bi-gear me-2"></i>
+                            Decompile APK
+                        </a>
+                    {% else %}
+                        <i class="bi bi-folder-x display-1

@@ -1,0 +1,301 @@
+{% extends "base.html" %}
+
+{% block title %}Upload APK - APK Editor{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Header -->
+            <div class="text-center mb-4">
+                <h1 class="h2 text-primary">
+                    <i class="bi bi-upload me-2"></i>
+                    Upload APK File
+                </h1>
+                <p class="text-muted">Select an APK file to start a new modification project</p>
+            </div>
+
+            <!-- Upload Form -->
+            <div class="card">
+                <div class="card-body p-4">
+                    <form method="POST" enctype="multipart/form-data" id="uploadForm">
+                        <!-- Project Name -->
+                        <div class="mb-4">
+                            <label for="project_name" class="form-label">
+                                <i class="bi bi-tag me-1"></i>
+                                Project Name
+                            </label>
+                            <input type="text" class="form-control" id="project_name" name="project_name" 
+                                   placeholder="Enter project name (optional - will use APK filename if empty)">
+                            <div class="form-text">
+                                Give your project a descriptive name for easy identification
+                            </div>
+                        </div>
+
+                        <!-- File Upload -->
+                        <div class="mb-4">
+                            <label for="apk_file" class="form-label">
+                                <i class="bi bi-file-earmark-zip me-1"></i>
+                                APK File *
+                            </label>
+                            <input type="file" class="form-control" id="apk_file" name="apk_file" 
+                                   accept=".apk" required>
+                            <div class="form-text">
+                                Select an APK file (maximum size: 100MB)
+                            </div>
+                        </div>
+
+                        <!-- File Info Display -->
+                        <div id="fileInfo" class="alert alert-info d-none">
+                            <h6 class="alert-heading">
+                                <i class="bi bi-info-circle me-1"></i>
+                                File Information
+                            </h6>
+                            <div id="fileDetails"></div>
+                        </div>
+
+                        <!-- Upload Progress -->
+                        <div id="uploadProgress" class="d-none">
+                            <div class="progress mb-3">
+                                <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                                     role="progressbar" style="width: 0%"></div>
+                            </div>
+                            <p class="text-center text-muted">
+                                <i class="bi bi-upload me-1"></i>
+                                Uploading file...
+                            </p>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
+                                <i class="bi bi-upload me-2"></i>
+                                Upload APK
+                            </button>
+                            <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-left me-2"></i>
+                                Back to Projects
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Requirements -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-list-check me-2"></i>
+                        Requirements & Guidelines
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="text-success">
+                                <i class="bi bi-check-circle me-1"></i>
+                                Supported
+                            </h6>
+                            <ul class="list-unstyled">
+                                <li><i class="bi bi-check text-success me-2"></i>APK files only</li>
+                                <li><i class="bi bi-check text-success me-2"></i>Files up to 100MB</li>
+                                <li><i class="bi bi-check text-success me-2"></i>Valid Android applications</li>
+                                <li><i class="bi bi-check text-success me-2"></i>Both debug and release APKs</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-warning">
+                                <i class="bi bi-exclamation-triangle me-1"></i>
+                                Important Notes
+                            </h6>
+                            <ul class="list-unstyled">
+                                <li><i class="bi bi-exclamation text-warning me-2"></i>Only modify apps you own</li>
+                                <li><i class="bi bi-exclamation text-warning me-2"></i>Backup original APK files</li>
+                                <li><i class="bi bi-exclamation text-warning me-2"></i>Test modifications safely</li>
+                                <li><i class="bi bi-exclamation text-warning me-2"></i>Respect app developers' rights</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Process Steps -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-arrow-right-circle me-2"></i>
+                        What Happens Next?
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3 text-center mb-3">
+                            <div class="bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                                <strong>1</strong>
+                            </div>
+                            <h6 class="mt-2">Upload</h6>
+                            <p class="small text-muted">APK file is uploaded and validated</p>
+                        </div>
+                        <div class="col-md-3 text-center mb-3">
+                            <div class="bg-info text-white rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                                <strong>2</strong>
+                            </div>
+                            <h6 class="mt-2">Decompile</h6>
+                            <p class="small text-muted">Extract resources and files</p>
+                        </div>
+                        <div class="col-md-3 text-center mb-3">
+                            <div class="bg-warning text-white rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                                <strong>3</strong>
+                            </div>
+                            <h6 class="mt-2">Edit</h6>
+                            <p class="small text-muted">Modify images, strings, layouts</p>
+                        </div>
+                        <div class="col-md-3 text-center mb-3">
+                            <div class="bg-success text-white rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                                <strong>4</strong>
+                            </div>
+                            <h6 class="mt-2">Download</h6>
+                            <p class="small text-muted">Compile and download modified APK</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const fileInput = document.getElementById('apk_file');
+    const fileInfo = document.getElementById('fileInfo');
+    const fileDetails = document.getElementById('fileDetails');
+    const projectNameInput = document.getElementById('project_name');
+    const uploadForm = document.getElementById('uploadForm');
+    const uploadProgress = document.getElementById('uploadProgress');
+    const submitBtn = document.getElementById('submitBtn');
+
+    // File selection handler
+    fileInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            // Auto-fill project name if empty
+            if (!projectNameInput.value.trim()) {
+                const fileName = file.name.replace(/\.[^/.]+$/, ""); // Remove extension
+                projectNameInput.value = fileName;
+            }
+
+            // Show file information
+            const fileSize = (file.size / (1024 * 1024)).toFixed(2);
+            const maxSize = 100;
+            
+            let html = `
+                <div class="row">
+                    <div class="col-sm-6">
+                        <strong>Filename:</strong> ${file.name}
+                    </div>
+                    <div class="col-sm-6">
+                        <strong>Size:</strong> ${fileSize} MB
+                    </div>
+                </div>
+            `;
+
+            if (fileSize > maxSize) {
+                html += `
+                    <div class="mt-2">
+                        <div class="text-danger">
+                            <i class="bi bi-exclamation-triangle me-1"></i>
+                            File size exceeds maximum limit of ${maxSize}MB
+                        </div>
+                    </div>
+                `;
+                submitBtn.disabled = true;
+            } else {
+                submitBtn.disabled = false;
+            }
+
+            fileDetails.innerHTML = html;
+            fileInfo.classList.remove('d-none');
+        } else {
+            fileInfo.classList.add('d-none');
+        }
+    });
+
+    // Form submission handler
+    uploadForm.addEventListener('submit', function(e) {
+        const file = fileInput.files[0];
+        if (file && file.size > 100 * 1024 * 1024) {
+            e.preventDefault();
+            alert('File size exceeds maximum limit of 100MB');
+            return;
+        }
+
+        // Show progress
+        uploadProgress.classList.remove('d-none');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Uploading...';
+        
+        // Simulate progress (since we can't track real upload progress easily)
+        let progress = 0;
+        const progressBar = uploadProgress.querySelector('.progress-bar');
+        const interval = setInterval(() => {
+            progress += Math.random() * 15;
+            if (progress > 90) progress = 90;
+            progressBar.style.width = progress + '%';
+        }, 500);
+
+        // Clear interval after a reasonable time
+        setTimeout(() => {
+            clearInterval(interval);
+            progressBar.style.width = '100%';
+        }, 8000);
+    });
+
+    // Drag and drop functionality
+    const dropZone = document.querySelector('.card-body');
+    
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, preventDefaults, false);
+    });
+    
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropZone.addEventListener(eventName, highlight, false);
+    });
+    
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, unhighlight, false);
+    });
+    
+    dropZone.addEventListener('drop', handleDrop, false);
+    
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+    
+    function highlight() {
+        dropZone.classList.add('border-primary', 'bg-light');
+    }
+    
+    function unhighlight() {
+        dropZone.classList.remove('border-primary', 'bg-light');
+    }
+    
+    function handleDrop(e) {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        
+        if (files.length > 0) {
+            const file = files[0];
+            if (file.name.toLowerCase().endsWith('.apk')) {
+                fileInput.files = files;
+                fileInput.dispatchEvent(new Event('change'));
+            } else {
+                alert('Please select a valid APK file');
+            }
+        }
+    }
+});
+</script>
+{% endblock %}

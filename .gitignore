@@ -1,0 +1,7 @@
+# GitHub Project Uploader - Prevent credential exposure
+config.ini
+*.ini
+*.log
+__pycache__/
+*.pyc
+.env
