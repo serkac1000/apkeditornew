@@ -297,6 +297,44 @@ def create_app():
         else:
             return 'other'
     
+    def should_skip_file(file_path):
+        """Check if file should be skipped during Android Studio export"""
+        # Skip problematic 9-patch files that often cause compilation errors
+        if file_path.endswith('.9.png'):
+            return True
+        
+        # Skip binary resource files that may be corrupted
+        if file_path.endswith('.arsc'):
+            return True
+        
+        # Skip dex files (compiled Java bytecode)
+        if file_path.endswith('.dex'):
+            return True
+        
+        # Skip binary kotlin files
+        if file_path.endswith('.kotlin_builtins'):
+            return True
+        
+        # Skip META-INF signing files
+        if 'META-INF/' in file_path and (
+            file_path.endswith('.RSA') or 
+            file_path.endswith('.SF') or 
+            file_path.endswith('.MF')
+        ):
+            return True
+        
+        # Skip certain resource directories that cause issues
+        problematic_dirs = [
+            'drawable-ldrtl-',  # RTL drawable variants
+            'color-v31/',       # Dynamic color resources (Android 12+)
+        ]
+        
+        for prob_dir in problematic_dirs:
+            if prob_dir in file_path:
+                return True
+        
+        return False
+    
     def create_android_studio_export(project_dir, export_path, project_name):
         """Create Android Studio compatible project export"""
         try:
@@ -547,11 +585,15 @@ android.useAndroidX=true
 android.enableJetifier=true"""
                 zip_ref.writestr('gradle.properties', gradle_properties)
                 
-                # Copy original APK files to app/src/main
+                # Copy original APK files to app/src/main, filtering problematic files
                 for root, dirs, files in os.walk(project_dir):
                     for file in files:
                         file_path = os.path.join(root, file)
                         arc_path = os.path.relpath(file_path, project_dir)
+                        
+                        # Skip problematic files that cause compilation issues
+                        if should_skip_file(arc_path):
+                            continue
                         
                         # Map APK structure to Android Studio structure
                         if arc_path.startswith('res/'):
@@ -562,7 +604,10 @@ android.enableJetifier=true"""
                             # Put other files in assets
                             new_path = f'app/src/main/assets/{arc_path}'
                         
-                        zip_ref.write(file_path, new_path)
+                        try:
+                            zip_ref.write(file_path, new_path)
+                        except Exception as e:
+                            logging.warning(f"Skipping file {arc_path}: {e}")
                 
                 # Add proguard-rules.pro
                 proguard_rules = """# Add project specific ProGuard rules here.
@@ -610,12 +655,22 @@ This project was exported from APK Editor and can be imported into Android Studi
 
 - This project contains the decompiled resources from the original APK
 - You may need to add Java/Kotlin source files manually
-- Some resources might need adjustment for proper compilation
+- Some problematic resources (9-patch files, binary resources) have been filtered out
+- If you encounter compilation errors, try cleaning the project: `./gradlew clean`
 - Consider using tools like jadx or dex2jar for source code recovery
+
+## Common Issues:
+
+- **9-patch compilation errors**: Original 9-patch files have been excluded as they often cause AAPT errors
+- **Missing drawables**: You may need to replace filtered resources with compatible versions
+- **Resource conflicts**: Some Android versions may have conflicting resource definitions
 
 ## Building:
 
-Run `./gradlew assembleDebug` to build a debug APK.
+1. Import the project into Android Studio
+2. Sync the project with Gradle files
+3. Clean and rebuild: `./gradlew clean assembleDebug`
+4. If errors persist, check the "Build" tab for specific issues
 """
                 zip_ref.writestr('README.md', readme_content)
             
