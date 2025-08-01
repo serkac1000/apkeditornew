@@ -327,11 +327,26 @@ def create_app():
         problematic_dirs = [
             'drawable-ldrtl-',  # RTL drawable variants
             'color-v31/',       # Dynamic color resources (Android 12+)
+            'drawable-v31/',    # Android 12+ specific drawables
+            'layout-v31/',      # Android 12+ specific layouts
+            'values-v31/',      # Android 12+ specific values
+            'mipmap-anydpi-v26/', # Adaptive icons that may cause issues
         ]
         
         for prob_dir in problematic_dirs:
             if prob_dir in file_path:
                 return True
+        
+        # Skip files with problematic names (corrupted during decompilation)
+        if any(char in os.path.basename(file_path) for char in ['?', ':', '<', '>', '|', '"', '*']):
+            return True
+        
+        # Skip very large files that might cause memory issues
+        try:
+            if os.path.exists(file_path) and os.path.getsize(file_path) > 50 * 1024 * 1024:  # 50MB
+                return True
+        except:
+            pass
         
         return False
     
@@ -621,11 +636,11 @@ exec "$JAVACMD" "$@"
 }}
 
 android {{
-    namespace '{project_name.lower().replace(" ", "_")}'
+    namespace '{project_name.lower().replace(" ", "_").replace("-", "_")}'
     compileSdk 34
 
     defaultConfig {{
-        applicationId "{project_name.lower().replace(" ", "_")}"
+        applicationId "{project_name.lower().replace(" ", "_").replace("-", "_")}"
         minSdk 21
         targetSdk 34
         versionCode 1
@@ -639,10 +654,39 @@ android {{
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }}
+        debug {{
+            minifyEnabled false
+            debuggable true
+        }}
     }}
+    
     compileOptions {{
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
+    }}
+    
+    // Handle resource conflicts and errors
+    packagingOptions {{
+        pickFirst '**/libc++_shared.so'
+        pickFirst '**/libjsc.so'
+        exclude 'META-INF/DEPENDENCIES'
+        exclude 'META-INF/LICENSE'
+        exclude 'META-INF/LICENSE.txt'
+        exclude 'META-INF/NOTICE'
+        exclude 'META-INF/NOTICE.txt'
+    }}
+    
+    // Ignore lint errors that might block compilation
+    lintOptions {{
+        abortOnError false
+        checkReleaseBuilds false
+        ignoreWarnings true
+    }}
+    
+    // Handle AAPT errors
+    aaptOptions {{
+        ignoreAssetsPattern "!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~"
+        cruncherEnabled false
     }}
 }}
 
@@ -810,19 +854,47 @@ This project was exported from APK Editor and can be imported into Android Studi
 - `app/src/main/res/` - Resources (layouts, drawables, values)
 - `app/src/main/assets/` - Additional APK files
 
-## Notes:
+## Troubleshooting Common Gradle Errors:
 
-- This project contains the decompiled resources from the original APK
-- You may need to add Java/Kotlin source files manually
-- Some problematic resources (9-patch files, binary resources) have been filtered out
-- If you encounter compilation errors, try cleaning the project: `./gradlew clean`
-- Consider using tools like jadx or dex2jar for source code recovery
+### Multiple Task Action Failures:
+If you encounter "Multiple task action failures occurred", try these solutions:
 
-## Common Issues:
+1. **Clean and Rebuild:**
+   ```
+   ./gradlew clean
+   ./gradlew assembleDebug
+   ```
 
-- **9-patch compilation errors**: Original 9-patch files have been excluded as they often cause AAPT errors
-- **Missing drawables**: You may need to replace filtered resources with compatible versions
-- **Resource conflicts**: Some Android versions may have conflicting resource definitions
+2. **Invalidate Caches:**
+   - In Android Studio: File > Invalidate Caches > Invalidate and Restart
+
+3. **Update build.gradle versions:**
+   - Update compileSdk to your installed SDK version
+   - Update targetSdk to match compileSdk or lower
+
+4. **Resource Issues:**
+   - Check for duplicate resource names in different folders
+   - Remove any corrupted XML files from res/ directories
+   - Delete problematic drawable files
+
+5. **AAPT Errors:**
+   - The build.gradle already includes AAPT error handling
+   - If issues persist, try disabling resource shrinking
+
+### 9-Patch Errors:
+- All .9.png files have been filtered out to prevent compilation errors
+- If you need 9-patch drawables, create new ones using Android Studio's editor
+
+### Resource Conflicts:
+- Some resources may have conflicting definitions
+- Check values/styles.xml and colors.xml for duplicate entries
+- Remove or rename conflicting resources
+
+### Memory Issues:
+- If Gradle runs out of memory, add to gradle.properties:
+  ```
+  org.gradle.jvmargs=-Xmx4096m -Dfile.encoding=UTF-8
+  ```
 
 ## Building:
 
@@ -830,6 +902,18 @@ This project was exported from APK Editor and can be imported into Android Studi
 2. Sync the project with Gradle files
 3. Clean and rebuild: `./gradlew clean assembleDebug`
 4. If errors persist, check the "Build" tab for specific issues
+
+## Source Code Recovery:
+
+- This export contains only resources, not source code
+- Use tools like jadx, dex2jar, or JADX-GUI for Java/Kotlin source recovery
+- Decompiled source may need manual cleanup and debugging
+
+## Additional Tips:
+
+- Start with a minimal AndroidManifest.xml and add permissions as needed
+- Test build frequently when adding back filtered resources
+- Consider creating a new project and copying resources gradually if issues persist
 """
                 zip_ref.writestr('README.md', readme_content)
             
